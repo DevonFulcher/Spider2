@@ -1,23 +1,11 @@
-import base64
-import json
 import logging
-import os
 import re
-import time
-import uuid
-from http import HTTPStatus
-from io import BytesIO
 from typing import Dict, List
 from spider_agent.agent.prompts import BIGQUERY_SYSTEM, LOCAL_SYSTEM, DBT_SYSTEM, SNOWFLAKE_SYSTEM, CH_SYSTEM, PG_SYSTEM,REFERENCE_PLAN_SYSTEM
 from spider_agent.agent.action import Action, Bash, Terminate, CreateFile, EditFile, LOCAL_DB_SQL, BIGQUERY_EXEC_SQL, SNOWFLAKE_EXEC_SQL, BQ_GET_TABLES, BQ_GET_TABLE_INFO, BQ_SAMPLE_ROWS, SF_GET_TABLES, SF_GET_TABLE_INFO, SF_SAMPLE_ROWS
 from spider_agent.envs.spider_agent import Spider_Agent_Env
 from spider_agent.agent.models import call_llm
-
-
-from openai import AzureOpenAI
-from typing import Dict, List, Optional, Tuple, Any, TypedDict
-
-
+from typing import Dict, List
 
 
 logger = logging.getLogger("spider_agent")
@@ -34,14 +22,14 @@ class PromptAgent:
         max_steps=15,
         use_plan=False
     ):
-        
+
         self.model = model
         self.max_tokens = max_tokens
         self.top_p = top_p
         self.temperature = temperature
         self.max_memory_length = max_memory_length
         self.max_steps = max_steps
-        
+
         self.thoughts = []
         self.responses = []
         self.actions = []
@@ -52,7 +40,7 @@ class PromptAgent:
         self.codes = []
         self.work_dir = "/workspace"
         self.use_plan = use_plan
-        
+
     def set_env_and_task(self, env: Spider_Agent_Env):
         self.env = env
         self.thoughts = []
@@ -64,8 +52,8 @@ class PromptAgent:
         self.instruction = self.env.task_config['instruction']
         if 'plan' in self.env.task_config:
             self.reference_plan = self.env.task_config['plan']
-        
-        
+
+
         if self.env.task_config['type'] == 'Bigquery':
             self._AVAILABLE_ACTION_CLASSES = [Bash, Terminate, BIGQUERY_EXEC_SQL, BQ_GET_TABLES, BQ_GET_TABLE_INFO, BQ_SAMPLE_ROWS, CreateFile, EditFile]
             action_space = "".join([action_cls.get_action_description() for action_cls in self._AVAILABLE_ACTION_CLASSES])
@@ -90,10 +78,10 @@ class PromptAgent:
             self._AVAILABLE_ACTION_CLASSES = [Bash, Terminate, CreateFile, EditFile]
             action_space = "".join([action_cls.get_action_description() for action_cls in self._AVAILABLE_ACTION_CLASSES])
             self.system_message = CH_SYSTEM.format(work_dir=self.work_dir, action_space=action_space, task=self.instruction, max_steps=self.max_steps)
-        
+
         if self.use_plan:
             self.system_message += REFERENCE_PLAN_SYSTEM.format(plan=self.reference_plan)
-        
+
 
 
         self.history_messages.append({
@@ -101,16 +89,16 @@ class PromptAgent:
             "content": [
                 {
                     "type": "text",
-                    "text": self.system_message 
+                    "text": self.system_message
                 },
             ]
         })
-        
+
     def predict(self, obs: Dict=None) -> List:
         """
         Predict the next action(s) based on the current observation.
-        """    
-        
+        """
+
         assert len(self.observations) == len(self.actions) and len(self.actions) == len(self.thoughts) \
             , "The number of observations and actions should be the same."
 
@@ -125,7 +113,7 @@ class PromptAgent:
                         "text": "Observation: {}\n".format(str(obs))
                     }
                 ]
-            })  
+            })
             status, response = call_llm({
                 "model": self.model,
                 "messages": messages,
@@ -139,7 +127,7 @@ class PromptAgent:
                     self.history_messages = [self.history_messages[0]] + self.history_messages[3:]
                 else:
                     raise Exception(f"Failed to call LLM, response: {response}")
-            
+
 
         try:
             action = self.parse_action(response)
@@ -151,7 +139,7 @@ class PromptAgent:
         except ValueError as e:
             print("Failed to parse action from response", e)
             action = None
-        
+
         logger.info("Observation: %s", obs)
         logger.info("Response: %s", response)
 
@@ -167,8 +155,8 @@ class PromptAgent:
         #     self.codes.append(None)
 
         return response, action
-        
-    
+
+
     def _add_message(self, observations: str, thought: str, action: Action):
         self.history_messages.append({
             "role": "user",
@@ -190,7 +178,7 @@ class PromptAgent:
         })
         if len(self.history_messages) > self.max_memory_length*2+1:
             self.history_messages = [self.history_messages[0]] + self.history_messages[-self.max_memory_length*2:]
-    
+
     def parse_action(self, output: str) -> Action:
         """ Parse action from text """
         if output is None or len(output) == 0:
@@ -205,7 +193,7 @@ class PromptAgent:
                 break
         if action_string == "":
             action_string = output.strip()
-        
+
         output_action = None
         for action_cls in self._AVAILABLE_ACTION_CLASSES:
             action = action_cls.parse_action_from_text(action_string)
@@ -219,11 +207,11 @@ class PromptAgent:
                 if action is not None:
                     output_action = action
                     break
-        
-        return output_action
-    
 
-    
+        return output_action
+
+
+
     def run(self):
         assert self.env is not None, "Environment is not set."
         result = ""
@@ -303,8 +291,8 @@ pageviews AS (
   GROUP BY user_pseudo_id
 ),
 pageviews_by_user AS (
-  SELECT 
-    p.user_pseudo_id, 
+  SELECT
+    p.user_pseudo_id,
     p.pageviews,
     CASE WHEN pu.user_pseudo_id IS NOT NULL THEN 'purchaser' ELSE 'non-purchaser' END AS user_type
   FROM pageviews p

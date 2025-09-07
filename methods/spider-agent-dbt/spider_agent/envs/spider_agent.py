@@ -1,16 +1,14 @@
 import logging
 import os
-import subprocess
-import tempfile
 import time
-from typing import Callable, Any, Optional, Tuple
+from typing import Callable, Any
 
-from typing import List, Dict, Union
+from typing import Dict, Union
 from docker.models.containers import Container
 from docker.client import DockerClient
 from docker.errors import ImageNotFound
 import gymnasium as gym
-import shutil, pathlib, docker, time, copy
+import pathlib, docker, time
 from spider_agent.controllers.python import PythonController
 from spider_agent.controllers.setup import SetupController
 from spider_agent.envs.utils import *
@@ -73,12 +71,12 @@ class Spider_Agent_Env(gym.Env):
         self._set_task_info(task_config)
         logger.info("Initializing...")
         self._construct_container()
-        
+
         self.controller = PythonController(container=self.container, work_dir=self.work_dir)
         self.setup_controller = SetupController(container=self.container, cache_dir=self.cache_dir)
-        
+
         logger.info("Setting up environment...")
-        
+
         self.setup_controller.setup(self.config)
         self.init_files_hash = self._get_env_files_hash()
         time.sleep(2)
@@ -86,9 +84,9 @@ class Spider_Agent_Env(gym.Env):
 
         signal.signal(signal.SIGINT, self._cleanup)
         signal.signal(signal.SIGTERM, self._cleanup)
-        
-        
-        
+
+
+
     def _set_task_info(self, task_config: Dict[str, Any]):
         self.task_id: str = task_config['instance_id']
         self.cache_dir: str = os.path.join(self.cache_dir_base, self.task_id)
@@ -97,7 +95,7 @@ class Spider_Agent_Env(gym.Env):
 
         self.config = task_config["config"] if "config" in task_config else []
         self.post_process_func = task_config["post_process"] if "post_process" in task_config else []
-        
+
     def close(self):
         self.container.stop()
         self.container.remove()
@@ -108,9 +106,9 @@ class Spider_Agent_Env(gym.Env):
             self.container.remove(force=True)
             print("remove container")
         sys.exit(0)
-        
+
     def _construct_container(self):
-        
+
         client = docker.from_env()
         container_name = self.container_name
         #### delete existing container
@@ -123,15 +121,15 @@ class Spider_Agent_Env(gym.Env):
             pass
         except docker.errors.APIError as e:
             pass
-        
+
         create_folder_if_not_exists(self.mnt_dir)
         src_dir = pathlib.Path(self.mnt_dir).absolute().__str__()
         delete_files_in_folder(self.mnt_dir)
-        
+
         volumes = {src_dir: {'bind': self.work_dir, 'mode': 'rw'}}
         allowed_params = ['command', 'ports', 'restart_policy', 'entrypoint', 'hostname', 'domainname', 'name', 'user', 'mac_address', 'platform', 'network_mode', 'network_disabled', 'healthcheck', "environment"]
         kwargs = {k: self.kwargs[k] for k in self.kwargs if k in allowed_params}
-        
+
         extra_params = {'detach': True, 'tty': True, 'stdout': True, 'stderr': True, 'stdin_open': True, **kwargs}
 
         try:
@@ -152,8 +150,8 @@ class Spider_Agent_Env(gym.Env):
             raise e
 
         time.sleep(START_UP_DELAY)
-        logger.info(f"Connected to container[name={self.container.name}, id={self.container.id}] from image {self.image_name} ...")    
-        
+        logger.info(f"Connected to container[name={self.container.name}, id={self.container.id}] from image {self.image_name} ...")
+
         return self.container
 
     def _get_env_files_hash(self) -> Dict[str, str]:
@@ -168,7 +166,7 @@ class Spider_Agent_Env(gym.Env):
                 file_path = os.path.join(root, f)
                 files_hash[file_path] = calculate_sha256(file_path)
         return files_hash
-    
+
 
     def post_process(self):
         """
@@ -201,7 +199,7 @@ class Spider_Agent_Env(gym.Env):
                         changed_files_list.append(file_path)
         return {"added_files": added_files_list, "changed_files": changed_files_list}
 
-    
+
     def step(self, action: Action):
         try:
             with timeout(DEFAULT_TIME_OUT,"Action execution time exceeded!"):
@@ -237,13 +235,13 @@ class Spider_Agent_Env(gym.Env):
                     raise ValueError(f"Unrecognized action type {action.action_type} !")
         except TimeoutError as e:
             observation = str(e)
-        
+
         observation = self._handle_observation(observation)
         # logger.info("Observation: %s", observation)
         return observation, done
-    
+
     def _handle_observation(self, observation):
-        max_length = MAX_OBS_LENGTH  
+        max_length = MAX_OBS_LENGTH
         if len(observation) > max_length:
             truncated_observation = observation[:max_length] + "\n[Observation too long, truncated; Try other commands to get the left part.]"
             return truncated_observation
@@ -252,22 +250,22 @@ class Spider_Agent_Env(gym.Env):
 
     def execute_code_action(self, action: Bash):
         """ Execute action in bash shell """
-        
+
         obs = self.controller.execute_command(action.code)
         if obs is None or obs == '':
             obs = "Command executed successfully. No output."
-        
+
         return obs
 
-    
+
     def execute_sql_action(self, action: LOCAL_DB_SQL):
         """ Execute action in sql"""
         obs = self.controller.execute_sql_code(action.file_path, action.code, action.output)
         if obs is None or obs == '':
             obs = f"SQL command executed successfully. No output."
-        
+
         return obs
-    
+
     def create_file_action(self, action: CreateFile):
         obs = self.controller.create_file(action.filepath, action.code)
         if obs is None or obs == '':
@@ -278,7 +276,7 @@ class Spider_Agent_Env(gym.Env):
             else:
                 obs = f"Falied to validate file {action.filepath}, error: {error}"
         return obs
-    
+
     def edit_file_action(self, action: EditFile):
         obs = self.controller.edit_file(action.filepath, action.code)
         if obs is None or obs == '':
@@ -289,14 +287,13 @@ class Spider_Agent_Env(gym.Env):
             else:
                 obs = f"Falied to validate file {action.filepath}, error: {error}"
         return obs
-    
-    
-    
+
+
+
     def execute_tmp_action(self, action: Union[BQ_GET_TABLES, BQ_GET_TABLE_INFO, BQ_SAMPLE_ROWS]):
         """ Execute action in sql"""
         obs = self.controller.execute_sql_code(action.file_path, action.code, action.output)
         if obs is None or obs == '':
             obs = f"SQL command executed successfully. No output."
-        
+
         return obs
-    

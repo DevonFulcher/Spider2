@@ -3,11 +3,7 @@ import datetime
 import json
 import logging
 import os
-import random
 import sys
-import glob
-
-from tqdm import tqdm
 
 from spider_agent.envs.spider_agent import Spider_Agent_Env
 from spider_agent.agent.agents import PromptAgent
@@ -43,7 +39,7 @@ logger.addHandler(file_handler)
 logger.addHandler(debug_handler)
 logger.addHandler(stdout_handler)
 logger.addHandler(sdebug_handler)
-#  }}} Logger Configs # 
+#  }}} Logger Configs #
 
 
 
@@ -51,18 +47,18 @@ def config() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Run end-to-end evaluation on the benchmark"
     )
-    
+
     parser.add_argument("--max_steps", type=int, default=30)
-    
+
     parser.add_argument("--max_memory_length", type=int, default=25)
     parser.add_argument("--suffix", '-s', type=str, default="gpt-4-try1")
-    
+
     parser.add_argument("--model", type=str, default="gpt-4o")
     parser.add_argument("--temperature", type=float, default=0)
     parser.add_argument("--top_p", type=float, default=0.9)
     parser.add_argument("--max_tokens", type=int, default=2500)
     parser.add_argument("--stop_token", type=str, default=None)
-    
+
     # example config
     parser.add_argument("--test_path","-t", type=str, default="../../spider2-dbt/examples/spider2-dbt.jsonl")
     parser.add_argument("--example_index", "-i", type=str, default="all", help="index range of the examples to run, e.g., '0-10', '2,3', 'all'")
@@ -75,7 +71,7 @@ def config() -> argparse.Namespace:
     parser.add_argument("--plan", action="store_true")
 
     parser.add_argument("--dbt_only", action="store_true",default=True)
-    
+
     args = parser.parse_args()
 
     return args
@@ -87,7 +83,7 @@ def test(
     test_all_meta: dict = None
 ) -> None:
     scores = []
-    
+
     # log args
     logger.info("Args: %s", args)
 
@@ -96,11 +92,11 @@ def test(
         experiment_id = args.model.split("/")[-1]
     else:
         experiment_id = args.model.split("/")[-1] + "-" + args.suffix
-        
+
     if args.plan:
         experiment_id = f"{experiment_id}-plan"
 
-    
+
     agent = PromptAgent(
         model=args.model,
         max_tokens=args.max_tokens,
@@ -125,14 +121,14 @@ def test(
             else:
                 indices = list(map(int, args.example_index.split(",")))
                 task_configs = [task_configs[i] for i in indices]
-    
+
     for task_config in task_configs:
         instance_id = experiment_id +"/"+ task_config["instance_id"]
         output_dir = os.path.join(args.output_dir, instance_id)
         result_json_path =os.path.join(output_dir, "spider/result.json")
 
-        
-      
+
+
         task_type = None
         if task_config["instance_id"].startswith("bq") or task_config["instance_id"].startswith("ga"):
             task_type = 'bq'
@@ -169,7 +165,7 @@ def test(
                     logger.info("Skipping %s", instance_id)
                     continue
             logger.info("Retrying %s", instance_id)
-            
+
         if os.path.exists(output_dir):
             os.system(f"rm -rf {output_dir}")
             logger.info("Removed existing %s", output_dir)
@@ -193,7 +189,7 @@ def test(
 
         env_config["init_args"]["name"] = experiment_id +"-"+ task_config["instance_id"]
 
-          
+
 
 
         env = Spider_Agent_Env(
@@ -202,9 +198,9 @@ def test(
             cache_dir="./cache",
             mnt_dir=output_dir
         )
-    
+
         agent.set_env_and_task(env)
-    
+
         logger.info('Task input:' + task_config['instruction'])
         done, result_output = agent.run()
         trajectory = agent.get_trajectory()
@@ -215,7 +211,7 @@ def test(
                            "result": result_output,"result_files": result_files, **trajectory}
         with open(os.path.join(output_dir, "spider/result.json"), "w") as f:
             json.dump(spider_result, f, indent=2)
-        
+
 
         logger.info("Finished %s", instance_id)
         env.close()
