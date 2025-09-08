@@ -1,8 +1,6 @@
 import os
-import json
 import shutil
 import zipfile
-import argparse
 
 jsonl_path = 'examples/spider2-dbt.jsonl'
 
@@ -31,36 +29,36 @@ def setup_dbt():
         folder_path = os.path.join(gold_path, folder)
         if os.path.isdir(folder_path) and not folder.startswith(prefixes):
             delete_duckdb_files(folder_path)
-    ################################################    
-    
-    
-    
+    ################################################
+
+
+
     def process_zip_file(zip_path, target_base_path, extraction_dir):
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
             zip_ref.extractall(extraction_dir)
-        
+
         for folder in os.listdir(extraction_dir):
             folder_path = os.path.join(extraction_dir, folder)
-            
+
             if folder == "__MACOSX":
                 continue
-            
+
             if os.path.isdir(folder_path):
                 folder_id = folder
-                
+
                 for root, dirs, files in os.walk(folder_path):
                     for file in files:
                         if file.endswith('.duckdb'):
                             target_folder = os.path.join(target_base_path, folder_id)
                             if not os.path.exists(target_folder):
                                 os.makedirs(target_folder)
-                            
+
                             source_file = os.path.join(root, file)
                             destination_file = os.path.join(target_folder, file)
-                            
+
                             shutil.move(source_file, destination_file)
                             print(f'Moved {source_file} to {destination_file}')
-        
+
         shutil.rmtree(extraction_dir)
         print(f'Deleted extraction directory: {extraction_dir}')
 
@@ -76,10 +74,8 @@ def setup_dbt():
     process_zip_file(dbt_gold_zip_path, gold_target_path, temp_dbt_gold_dir)
 
     print("Finished dbt setup...")
-    
+
 error_dbs = []
 
 if __name__ == '__main__':
     setup_dbt()
-
-

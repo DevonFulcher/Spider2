@@ -9,7 +9,6 @@ from spider_agent.envs.spider_agent import Spider_Agent_Env
 from spider_agent.agent.agents import PromptAgent
 
 
-#  Logger Configs {{{ #
 logger = logging.getLogger("spider_agent")
 logger.setLevel(logging.DEBUG)
 
@@ -39,8 +38,6 @@ logger.addHandler(file_handler)
 logger.addHandler(debug_handler)
 logger.addHandler(stdout_handler)
 logger.addHandler(sdebug_handler)
-#  }}} Logger Configs #
-
 
 
 def config() -> argparse.Namespace:
@@ -80,10 +77,7 @@ def config() -> argparse.Namespace:
 
 def test(
     args: argparse.Namespace,
-    test_all_meta: dict = None
 ) -> None:
-    scores = []
-
     # log args
     logger.info("Args: %s", args)
 
@@ -95,7 +89,6 @@ def test(
 
     if args.plan:
         experiment_id = f"{experiment_id}-plan"
-
 
     agent = PromptAgent(
         model=args.model,
@@ -126,29 +119,8 @@ def test(
         instance_id = experiment_id +"/"+ task_config["instance_id"]
         output_dir = os.path.join(args.output_dir, instance_id)
         result_json_path =os.path.join(output_dir, "spider/result.json")
-
-
-
-        task_type = None
-        if task_config["instance_id"].startswith("bq") or task_config["instance_id"].startswith("ga"):
-            task_type = 'bq'
-        elif task_config["instance_id"].startswith("local"):
-            task_type = 'local'
-        elif task_config["instance_id"].startswith("sf"):
-            task_type = 'sf'
-        elif task_config["instance_id"].startswith("ch0"):
-            task_type = 'ch'
-        elif task_config["instance_id"].startswith("postgres"):
-            task_type = 'pg'
-        else:
-            task_type = 'dbt'
-
-
         valid_types = set()
-
         if args.dbt_only: valid_types.add('dbt')
-
-
 
         valid_ids.append(task_config["instance_id"])
         if not args.overwriting and os.path.exists(result_json_path):
@@ -207,8 +179,7 @@ def test(
 
         os.makedirs(os.path.join(output_dir, "spider"), exist_ok=True)
         result_files = env.post_process()
-        spider_result = {"finished": done, "steps": len(trajectory["trajectory"]),
-                           "result": result_output,"result_files": result_files, **trajectory}
+        spider_result = {"finished": done, "steps": len(trajectory["trajectory"]), "result": result_output,"result_files": result_files, **trajectory}
         with open(os.path.join(output_dir, "spider/result.json"), "w") as f:
             json.dump(spider_result, f, indent=2)
 

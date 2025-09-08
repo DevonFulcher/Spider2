@@ -29,7 +29,7 @@ Follow the instructions in the [Docker setup guide](https://docs.docker.com/engi
 
 #### 3. Download Spider 2.0 DBT Database Source
 ```
-cd ../../spider2-dbt 
+cd ../../spider2-dbt
 or
 cd ./spider2-dbt
 
@@ -55,7 +55,7 @@ export OPENAI_API_KEY=your_openai_api_key
 export GEMINI_API_KEY=your_genmini_api_key
 ```
 
-##### Run 
+##### Run
 
 
 ```python
@@ -70,8 +70,6 @@ python run.py --model gpt-4o --suffix test1
 python run.py --model gpt-4o --s experiment_name
 ```
 
-
 ## Evaluation
 
 We create [evaluation suite](./evaluation_suite) for Spider 2.0.
-

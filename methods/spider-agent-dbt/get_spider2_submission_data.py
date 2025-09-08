@@ -8,7 +8,7 @@ import re
 
 def copy_folder(src, dest, files_to_copy=None):
     """
-    Copies a folder or specified files to a destination path. 
+    Copies a folder or specified files to a destination path.
     If the destination path exists, it will be cleared first.
 
     :param src: Source folder path
@@ -19,14 +19,14 @@ def copy_folder(src, dest, files_to_copy=None):
     if os.path.exists(dest):
         shutil.rmtree(dest)
     os.makedirs(dest)
-    
+
     if files_to_copy is None:
         shutil.copytree(src, dest, dirs_exist_ok=True)
     else:
         # Copy specified files
         if isinstance(files_to_copy, str):
             files_to_copy = [files_to_copy]
-        
+
         os.makedirs(dest, exist_ok=True)
         for file in files_to_copy:
             full_file_path = os.path.join(src, file)
@@ -43,14 +43,13 @@ def copy_folder(src, dest, files_to_copy=None):
 
 
 def postprocess(args):
-    
+
     output_dir = os.path.join(os.path.join(args.all_results_path, args.experiment_suffix))
-    
+
     submission_dir = args.results_folder_name
     if not os.path.exists(submission_dir):
         os.makedirs(submission_dir)
-        
-        
+
     results_metadata = []
 
     input_ids =  os.listdir(output_dir)
@@ -67,16 +66,16 @@ def postprocess(args):
         except FileNotFoundError:
             print(f"Error: File not found - {json_file_path}")
             continue
-        
+
         result_folder_root_path = os.path.join(output_dir, instance_id)
         answer_or_path = instance_result_data['result']
-        
+
         if answer_or_path.startswith('/workspace'):
             answer_or_path = answer_or_path.replace('/workspace/','')
 
-        
+
         if answer_or_path == '':
-            results_metadata.append({'instance_id': instance_id, 'answer_or_path': '', 'answer_type': 'answer'})   
+            results_metadata.append({'instance_id': instance_id, 'answer_or_path': '', 'answer_type': 'answer'})
         elif os.path.exists(os.path.join(result_folder_root_path,answer_or_path)):
             results_metadata.append({'instance_id': instance_id, 'answer_or_path': answer_or_path, 'answer_type': 'file'})
             try:
@@ -90,13 +89,13 @@ def postprocess(args):
                     if match:
                         filename = match.group(1)
                         results_metadata.append({
-                            'instance_id': instance_id, 
-                            'answer_or_path': filename, 
+                            'instance_id': instance_id,
+                            'answer_or_path': filename,
                             'answer_type': 'file'
                         })
                         copy_folder(
-                            result_folder_root_path, 
-                            os.path.join(submission_dir, instance_id), 
+                            result_folder_root_path,
+                            os.path.join(submission_dir, instance_id),
                             files_to_copy=filename
                         )
                 except:
@@ -130,10 +129,7 @@ def postprocess(args):
 
     with open(os.path.join(submission_dir, 'results_metadata.jsonl'), 'w') as file:
         for entry in results_metadata:
-            file.write(json.dumps(entry) + '\n')    
-        
-        
-        
+            file.write(json.dumps(entry) + '\n')
 
 
 if __name__ == '__main__':

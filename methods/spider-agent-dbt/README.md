@@ -27,7 +27,7 @@ Follow the instructions in the [Docker setup guide](https://docs.docker.com/engi
 
 #### 3. Download Spider 2.0 DBT Database Source
 ```
-cd ../../spider2-dbt 
+cd ../../spider2-dbt
 or
 cd ./spider2-dbt
 
@@ -53,7 +53,7 @@ export OPENAI_API_KEY=your_openai_api_key
 export GEMINI_API_KEY=your_genmini_api_key
 ```
 
-##### Run 
+##### Run
 
 
 ```python
@@ -71,8 +71,6 @@ python run.py --model gpt-4o -s experiment_name
 
 ---
 
-
-
 ### Evaluation
 
 #### Extract Results
@@ -81,6 +79,7 @@ Reorganize run results into a standard submission format, here we store the answ
 
 ```python
 python get_spider2_submission_data.py --experiment_suffix <The name of this experiment> --results_folder_name <Standard Submission Folders>
+
 python get_spider2_submission_data.py --experiment_suffix gpt-4o-test1 --results_folder_name ../../spider2-dbt/evaluation_suite/gpt-4o-test1
 ```
 
@@ -101,6 +100,3 @@ You can run `evaluate.py` in the [evaluation suite](https://github.com/xlang-ai/
 - `BQ_GET_TABLE_INFO`: Retrieves detailed column information for a specific table in BigQuery.
 - `BQ_SAMPLE_ROWS`: Samples a specified number of rows from a BigQuery table and saves them as JSON.
 - `Terminate`: Marks the completion of the task, returning the final result or file path.
-
-
-
